@@ -2751,38 +2751,47 @@ function onDocumentLoad() {
 
 document.addEventListener('DOMContentLoaded', onDocumentLoad);
 (function() {
+    // 1. 彻底关掉原本那个碍事的手机触控层
+    const style = document.createElement('style');
+    style.innerHTML = '.controller { display: none !important; }';
+    document.head.appendChild(style);
+
     let samoTimer;
     
-    // 强制接管屏幕触摸
-    document.addEventListener('touchstart', function(e) {
+    // 2. 重新定义屏幕触摸逻辑
+    const handleTouch = function(e) {
         const game = window.Runner && window.Runner.instance_;
         if (!game) return;
 
-        if (game.crashed || !game.playing) {
+        // 如果游戏结束了，点击就重启
+        if (game.crashed) {
             game.restart();
-        } else {
-            // 1. 立即触发跳跃
-            game.tRex.startJump(game.currentSpeed);
+            return;
+        }
 
-            // 2. 关键：强制开启趴下检测
+        if (e.type === 'touchstart') {
+            // 点击立即跳跃
+            game.tRex.startJump(game.currentSpeed);
+            
+            // 开启长按计时（稍微再缩短一点到 130ms，让它更灵敏）
             clearTimeout(samoTimer);
             samoTimer = setTimeout(function() {
-                // 直接强制小老鼠进入趴下状态
-                game.tRex.setDuck(true); 
-                // 这里的 150ms 比刚才更快，更灵敏
-            }, 150); 
+                if (game.playing) {
+                    game.tRex.setDuck(true); 
+                }
+            }, 130);
+        } else if (e.type === 'touchend') {
+            // 手指离开，恢复状态
+            clearTimeout(samoTimer);
+            game.tRex.setDuck(false);
+            game.tRex.endJump();
         }
+        
+        // 阻止浏览器默认的缩放和菜单
         if (e.cancelable) e.preventDefault();
-    }, { passive: false });
+    };
 
-    document.addEventListener('touchend', function() {
-        const game = window.Runner && window.Runner.instance_;
-        if (!game) return;
-
-        clearTimeout(samoTimer);
-        // 强制解除趴下状态
-        game.tRex.setDuck(false);
-        game.tRex.speedDrop = false;
-        game.tRex.endJump();
-    });
+    // 3. 把这个新逻辑绑定到整个网页背景上
+    document.addEventListener('touchstart', handleTouch, { passive: false });
+    document.addEventListener('touchend', handleTouch, { passive: false });
 })();

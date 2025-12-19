@@ -2750,35 +2750,39 @@ function onDocumentLoad() {
 }
 
 document.addEventListener('DOMContentLoaded', onDocumentLoad);
-// Samo 的专属控制：全屏点击跳跃，长按趴下
 (function() {
-    let touchTimer;
+    let samoTimer;
+    
+    // 强制接管屏幕触摸
     document.addEventListener('touchstart', function(e) {
-        // 找到游戏实例
         const game = window.Runner && window.Runner.instance_;
         if (!game) return;
 
-        if (!game.playing || game.crashed) {
-            // 游戏未开始或已结束，触发重启
-            game.onKeyDown({ keyCode: 32, target: {}, type: 'keydown' });
+        if (game.crashed || !game.playing) {
+            game.restart();
         } else {
-            // 游戏中：立即跳跃
+            // 1. 立即触发跳跃
             game.tRex.startJump(game.currentSpeed);
-            // 开启长按计时
-            touchTimer = setTimeout(function() {
-                game.tRex.setDuck(true);
-            }, 200);
+
+            // 2. 关键：强制开启趴下检测
+            clearTimeout(samoTimer);
+            samoTimer = setTimeout(function() {
+                // 直接强制小老鼠进入趴下状态
+                game.tRex.setDuck(true); 
+                // 这里的 150ms 比刚才更快，更灵敏
+            }, 150); 
         }
-        // 阻止手机默认行为
         if (e.cancelable) e.preventDefault();
     }, { passive: false });
 
     document.addEventListener('touchend', function() {
         const game = window.Runner && window.Runner.instance_;
         if (!game) return;
-        
-        clearTimeout(touchTimer);
+
+        clearTimeout(samoTimer);
+        // 强制解除趴下状态
         game.tRex.setDuck(false);
+        game.tRex.speedDrop = false;
         game.tRex.endJump();
     });
 })();

@@ -2751,47 +2751,41 @@ function onDocumentLoad() {
 
 document.addEventListener('DOMContentLoaded', onDocumentLoad);
 (function() {
-    // 1. 彻底关掉原本那个碍事的手机触控层
-    const style = document.createElement('style');
-    style.innerHTML = '.controller { display: none !important; }';
-    document.head.appendChild(style);
-
     let samoTimer;
     
-    // 2. 重新定义屏幕触摸逻辑
-    const handleTouch = function(e) {
+    // 模拟按下键盘的函数
+    function triggerKey(code, type) {
+        const event = new KeyboardEvent(type, {
+            keyCode: code,
+            which: code,
+            bubbles: true
+        });
+        document.dispatchEvent(event);
+    }
+
+    document.addEventListener('touchstart', function(e) {
         const game = window.Runner && window.Runner.instance_;
         if (!game) return;
 
-        // 如果游戏结束了，点击就重启
         if (game.crashed) {
-            game.restart();
-            return;
-        }
+            triggerKey(32, 'keydown'); // 死掉时，模拟空格键重启
+        } else {
+            // 1. 模拟按下“向上键”(38) 触发跳跃
+            triggerKey(38, 'keydown');
 
-        if (e.type === 'touchstart') {
-            // 点击立即跳跃
-            game.tRex.startJump(game.currentSpeed);
-            
-            // 开启长按计时（稍微再缩短一点到 130ms，让它更灵敏）
+            // 2. 开启计时，如果按住不动，模拟按下“向下键”(40)
             clearTimeout(samoTimer);
             samoTimer = setTimeout(function() {
-                if (game.playing) {
-                    game.tRex.setDuck(true); 
-                }
-            }, 130);
-        } else if (e.type === 'touchend') {
-            // 手指离开，恢复状态
-            clearTimeout(samoTimer);
-            game.tRex.setDuck(false);
-            game.tRex.endJump();
+                triggerKey(40, 'keydown');
+            }, 150);
         }
-        
-        // 阻止浏览器默认的缩放和菜单
         if (e.cancelable) e.preventDefault();
-    };
+    }, { passive: false });
 
-    // 3. 把这个新逻辑绑定到整个网页背景上
-    document.addEventListener('touchstart', handleTouch, { passive: false });
-    document.addEventListener('touchend', handleTouch, { passive: false });
+    document.addEventListener('touchend', function() {
+        clearTimeout(samoTimer);
+        // 手指抬起时，模拟松开“向上”和“向下”键
+        triggerKey(38, 'keyup');
+        triggerKey(40, 'keyup');
+    });
 })();

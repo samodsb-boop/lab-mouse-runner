@@ -2750,3 +2750,35 @@ function onDocumentLoad() {
 }
 
 document.addEventListener('DOMContentLoaded', onDocumentLoad);
+// Samo 的专属控制：全屏点击跳跃，长按趴下
+(function() {
+    let touchTimer;
+    document.addEventListener('touchstart', function(e) {
+        // 找到游戏实例
+        const game = window.Runner && window.Runner.instance_;
+        if (!game) return;
+
+        if (!game.playing || game.crashed) {
+            // 游戏未开始或已结束，触发重启
+            game.onKeyDown({ keyCode: 32, target: {}, type: 'keydown' });
+        } else {
+            // 游戏中：立即跳跃
+            game.tRex.startJump(game.currentSpeed);
+            // 开启长按计时
+            touchTimer = setTimeout(function() {
+                game.tRex.setDuck(true);
+            }, 200);
+        }
+        // 阻止手机默认行为
+        if (e.cancelable) e.preventDefault();
+    }, { passive: false });
+
+    document.addEventListener('touchend', function() {
+        const game = window.Runner && window.Runner.instance_;
+        if (!game) return;
+        
+        clearTimeout(touchTimer);
+        game.tRex.setDuck(false);
+        game.tRex.endJump();
+    });
+})();

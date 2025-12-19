@@ -2751,9 +2751,10 @@ function onDocumentLoad() {
 
 document.addEventListener('DOMContentLoaded', onDocumentLoad);
 (function() {
-    let samoTimer;
-    
-    // 模拟按下键盘的函数
+    let longPressActive = false;
+    let longPressTimer;
+    const LONG_PRESS_THRESHOLD = 150; 
+
     function triggerKey(code, type) {
         const event = new KeyboardEvent(type, {
             keyCode: code,
@@ -2768,24 +2769,37 @@ document.addEventListener('DOMContentLoaded', onDocumentLoad);
         if (!game) return;
 
         if (game.crashed) {
-            triggerKey(32, 'keydown'); // 死掉时，模拟空格键重启
-        } else {
-            // 1. 模拟按下“向上键”(38) 触发跳跃
-            triggerKey(38, 'keydown');
-
-            // 2. 开启计时，如果按住不动，模拟按下“向下键”(40)
-            clearTimeout(samoTimer);
-            samoTimer = setTimeout(function() {
-                triggerKey(40, 'keydown');
-            }, 150);
+            triggerKey(32, 'keydown');
+            return;
         }
+
+        longPressActive = false;
+        
+        // 1. 启动计时器：如果按住时间长，切换到趴下
+        clearTimeout(longPressTimer);
+        longPressTimer = setTimeout(function() {
+            longPressActive = true;
+            triggerKey(40, 'keydown'); 
+        }, LONG_PRESS_THRESHOLD);
+
         if (e.cancelable) e.preventDefault();
     }, { passive: false });
 
     document.addEventListener('touchend', function() {
-        clearTimeout(samoTimer);
-        // 手指抬起时，模拟松开“向上”和“向下”键
-        triggerKey(38, 'keyup');
-        triggerKey(40, 'keyup');
+        clearTimeout(longPressTimer);
+
+        if (longPressActive) {
+            // --- 情况 A：长按结束 ---
+            // 只做一件事：松开向下键，让它站起来正常走路
+            triggerKey(40, 'keyup');
+        } else {
+            // --- 情况 B：短促的点击 ---
+            // 只有在这种情况下才触发跳跃
+            triggerKey(38, 'keydown');
+            setTimeout(() => triggerKey(38, 'keyup'), 50);
+        }
+        
+        // 重置状态，等待下一次指令
+        longPressActive = false;
     });
 })();

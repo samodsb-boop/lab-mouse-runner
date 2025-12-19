@@ -42,38 +42,3 @@
 </script>
     
 </html>
-// --- 以下是 Samo 的手机专属控制代码 ---
-(function() {
-    let touchTimer;
-    
-    // 监听整个屏幕的触摸
-    document.addEventListener('touchstart', function(e) {
-        if (!window.Runner || !Runner.instance_) return;
-        const game = Runner.instance_;
-        
-        // 1. 如果游戏还没开始或已经结束，点击就触发重启/开始
-        if (!game.playing || game.crashed) {
-            game.onKeyDown({ keyCode: 32, target: {}, type: 'keydown' });
-            return;
-        }
-
-        // 2. 正常游戏中：点击立即跳跃
-        game.tRex.startJump(game.currentSpeed);
-
-        // 3. 开启长按计时：按住 200ms 变为趴下
-        touchTimer = setTimeout(function() {
-            game.tRex.setDuck(true);
-        }, 200);
-        
-        e.preventDefault(); // 防止手机页面乱跳
-    }, { passive: false });
-
-    document.addEventListener('touchend', function() {
-        if (!window.Runner || !Runner.instance_) return;
-        const game = Runner.instance_;
-        
-        clearTimeout(touchTimer); // 手松开，计时停止
-        game.tRex.setDuck(false); // 停止趴下动作
-        game.tRex.endJump();      // 结束跳跃上升
-    });
-})();

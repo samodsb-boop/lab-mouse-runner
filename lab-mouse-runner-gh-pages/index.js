@@ -2753,7 +2753,7 @@ document.addEventListener('DOMContentLoaded', onDocumentLoad);
 (function() {
     let longPressActive = false;
     let longPressTimer;
-    const LONG_PRESS_THRESHOLD = 150; 
+    const LONG_PRESS_THRESHOLD = 180; // 稍微调高一点点，防止跳跃还没飞稳就判定为趴下
 
     function triggerKey(code, type) {
         const event = new KeyboardEvent(type, {
@@ -2775,11 +2775,14 @@ document.addEventListener('DOMContentLoaded', onDocumentLoad);
 
         longPressActive = false;
         
-        // 1. 启动计时器：如果按住时间长，切换到趴下
+        // 1. 核心改动：手指一碰屏幕，立即给一个“向上”的完整信号
+        triggerKey(38, 'keydown');
+
         clearTimeout(longPressTimer);
         longPressTimer = setTimeout(function() {
             longPressActive = true;
-            triggerKey(40, 'keydown'); 
+            triggerKey(38, 'keyup');   // 先松开跳
+            triggerKey(40, 'keydown'); // 再触发趴
         }, LONG_PRESS_THRESHOLD);
 
         if (e.cancelable) e.preventDefault();
@@ -2789,17 +2792,17 @@ document.addEventListener('DOMContentLoaded', onDocumentLoad);
         clearTimeout(longPressTimer);
 
         if (longPressActive) {
-            // --- 情况 A：长按结束 ---
-            // 只做一件事：松开向下键，让它站起来正常走路
+            // 长按结束：站起来
             triggerKey(40, 'keyup');
         } else {
-            // --- 情况 B：短促的点击 ---
-            // 只有在这种情况下才触发跳跃
-            triggerKey(38, 'keydown');
-            setTimeout(() => triggerKey(38, 'keyup'), 50);
+            // 短按结束：
+            // 我们让它多飞一会，延迟到 120ms 再发送 keyup
+            // 这样老鼠会跳得更高、落下更自然，不再是“秒掉地”
+            setTimeout(() => {
+                triggerKey(38, 'keyup');
+            }, 120); 
         }
         
-        // 重置状态，等待下一次指令
         longPressActive = false;
     });
 })();
